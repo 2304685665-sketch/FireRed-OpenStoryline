@@ -318,6 +318,19 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
                 seen.setdefault(sid, b["id"])
             if errs:
                 issues[b["id"]] = errs
+        # the same moment must not appear twice (e.g. the hook repeated later in full)
+        spans = []
+        for b in outline["beats"]:
+            sel = sels.get(b["id"], {})
+            src = next((c["source"] for c in cands.get(b["id"], []) if c["segment_id"] == sel.get("segment_id")), None)
+            try:
+                spans.append((b["id"], src, float(sel["in_s"]), float(sel["out_s"])))
+            except (KeyError, TypeError, ValueError):
+                continue
+        for i, (bid, src, a, e) in enumerate(spans):
+            for bid2, src2, a2, e2 in spans[:i]:
+                if src and src == src2 and a < e2 - 0.5 and a2 < e - 0.5:
+                    issues.setdefault(bid, []).append(f"与 {bid2} 的画面重叠（{a2:.1f}-{e2:.1f}s），请换一段")
         plan = EditPlan.from_dict(state["plan"])
         notes = fit_duration(plan, float(outline.get("target_s") or 0))
         for i in validate(plan, seg_len):
