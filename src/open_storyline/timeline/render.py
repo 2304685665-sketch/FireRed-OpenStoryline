@@ -225,7 +225,7 @@ def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: s
                 mix.append(f"[s{n}]")
                 n += 1
     filters.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=first,"
-                   f"loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]")
+                   f"loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[a]")
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[v]", "-map", "[a]",
          "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", "-b:a", "192k",
          "-movflags", "+faststart", "-t", f"{total:.3f}", str(out)])
