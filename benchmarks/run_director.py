@@ -98,6 +98,11 @@ async def main_async(args) -> None:
     from open_storyline.retrieval.encoders import ChineseClipEncoder
     from open_storyline.retrieval.index import SegmentIndex
 
+    from open_storyline.config import default_config_path, load_settings
+
+    cfg = load_settings(default_config_path())
+    if not (cfg.llm.api_key and cfg.llm.base_url and cfg.llm.model):
+        sys.exit("LLM not configured: set OPENSTORYLINE_LLM_MODEL / _BASE_URL / _API_KEY in this terminal first")
     prices = load_prices(Path(args.prices))
     index = SegmentIndex.load(args.index)
     encoder = ChineseClipEncoder(args.model_dir) if "visual" in args.channels else None
