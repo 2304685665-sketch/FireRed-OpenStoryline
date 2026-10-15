@@ -7,8 +7,9 @@ and tool call is written to ``<outputs>/<session>/trace/events.jsonl``; a
 ``run.json`` next to it stores the brief, model configuration, git commit,
 turns, final reply, produced videos and the summarized numbers.
 
-If the agent stops to ask the user something, the runner answers with one fixed
-reply (``AUTO_REPLY``) and continues, at most ``--max-turns`` times. The same
+If a turn ends without a rendered video (the agent asked for confirmation or only
+presented a plan), the runner answers with one fixed reply (``AUTO_REPLY``) and
+continues, at most ``--max-turns`` times. The same
 policy is used for every system being compared.
 
 Budget brake: before each brief the cost of finished runs is summed; the batch
@@ -35,6 +36,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))  # some upstream modules import `src.open_storyline...`
 sys.path.insert(0, str(ROOT))  # upstream modules also import themselves as `src.open_storyline...`
 
 AUTO_REPLY = "请按你的判断直接完成剪辑并导出成片，不需要再向我确认。"
@@ -79,9 +81,8 @@ def git_commit() -> str:
         return "unknown"
 
 
-def looks_like_question(text: str) -> bool:
-    t = (text or "").strip()
-    return bool(t) and (t.endswith(("?", "？")) or "请确认" in t or "是否" in t[-60:])
+def produced_videos(run_dir: Path) -> list[str]:
+    return sorted(str(p) for p in run_dir.rglob("*.mp4"))
 
 
 async def run_one(brief: dict, args, prices, spent_before: float) -> dict:
@@ -135,7 +136,9 @@ async def run_one(brief: dict, args, prices, spent_before: float) -> dict:
             )
             messages = result["messages"]
             final_text = next((m.content for m in reversed(messages) if isinstance(m, AIMessage)), "") or ""
-            if turns > args.max_turns or not looks_like_question(final_text):
+            # Continue until a video exists: the agent often ends a turn by presenting its plan
+            # or asking for confirmation without a question mark, so text heuristics are unreliable.
+            if produced_videos(run_dir) or turns > args.max_turns:
                 break
             messages.append(HumanMessage(content=AUTO_REPLY))
     except BudgetExceeded as e:
@@ -145,7 +148,7 @@ async def run_one(brief: dict, args, prices, spent_before: float) -> dict:
     except Exception as e:  # keep the batch going; the trace shows where it failed
         error = f"{type(e).__name__}: {e}"
 
-    videos = sorted(str(p) for p in run_dir.rglob("*.mp4"))
+    videos = produced_videos(run_dir)
     summary = summarize(load_trace(trace_path), prices) if trace_path.exists() else {}
     record = {
         "label": args.label, "brief_id": brief["id"], "brief": brief["brief"], "session_id": session_id,
