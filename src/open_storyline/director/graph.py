@@ -38,21 +38,24 @@ DIRECTOR_PROMPT = """你是短视频导演。根据创作需求和素材目录�
 创作需求：
 {brief}
 
-素材目录（文件、时长、部分原声台词）：
+素材目录（每个文件是一个场景，比如一顿饭；含时长和部分原声台词）：
 {overview}
 
 要求：
+- 先定一个贯穿全片的主题 theme（一句话）和顶部标题 header（12 字以内），所有分镜都为这个主题服务。
 - 总时长贴合需求里的时长；没写时长就控制在 45 秒左右。
-- 第一个 beat 必须是 purpose="hook"：3 秒内抛出全片最有冲突或最好笑的一句/一幕。
-- 每个 beat 写一个 query：描述要找的画面或台词（会用于画面检索和原声检索）。
-- 好笑的点优先用素材里的原声台词，不要编造台词。
+- 第一个 beat 必须是 purpose="hook"：3 秒内抛出全片最有冲突或最好笑的一句/一幕，可以用任何场景（scene="any"）。
+- 其余每个 beat 必须写 scene：素材目录里的一个文件名（原样照抄）。一个场景可以有 1-3 个 beat
+  （例如 setup 上菜 → reaction 反应 → verdict 评价），同一场景的 beat 写在一起，不要把一个场景拆到前后不同位置。
+- 每个 beat 写一个 query：描述要在该场景里找的画面或台词（会用于画面检索和原声检索）。
+- 好笑的点优先用素材里的原声台词，不要编造台词，也不要编造素材里没有的情节。
 - verdict（红榜 red / 黑榜 black）只有在需求明确说了好坏时才填，否则为 null。
-- 需要按时间顺序时 order="chronological"，否则 "narrative"。
+- 需要按时间顺序时 order="chronological"（场景按文件编号先后），否则 "narrative"。
 
 只输出 JSON：
-{{"target_s": 数字, "order": "chronological|narrative", "header": "顶部标题（可空）",
-  "beats": [{{"id": "b1", "purpose": "hook|setup|reaction|verdict|montage|ending", "query": "...",
-              "target_s": 数字, "card": "左上角卡片（可空）", "punch": "大字吐槽（可空）",
+{{"theme": "...", "header": "...", "target_s": 数字, "order": "chronological|narrative",
+  "beats": [{{"id": "b1", "purpose": "hook|setup|reaction|verdict|montage|ending", "scene": "文件名或 any",
+              "query": "...", "target_s": 数字, "card": "左上角卡片（可空）", "punch": "大字吐槽（可空）",
               "verdict": "red|black|null", "endcard": "结尾互动语（仅 ending，可空）"}}]}}"""
 
 SELECTOR_PROMPT = """你是剪辑师，为一个分镜挑镜头。
@@ -125,6 +128,32 @@ def _text_overlap(clean: str, raw: str) -> float:
     return len(a & b) / max(1, len(a))
 
 
+def order_beats(beats: list[dict], src_of, sels: dict, chronological: bool) -> list[dict]:
+    """
+    Hook first, ending last; in between, every scene (source file) appears as ONE contiguous
+    block, so the same meal is never split across the video. Blocks follow capture order when
+    chronological, otherwise the order in which the director first used each scene; inside a
+    block, beats keep the director's order (setup -> reaction -> verdict).
+    """
+    hook = [b for b in beats if b.get("purpose") == "hook"][:1]
+    ending = [b for b in beats if b.get("purpose") == "ending" and b not in hook][-1:]
+    middle = [b for b in beats if b not in hook and b not in ending]
+    blocks: dict[str, list[dict]] = {}
+    for b in middle:
+        blocks.setdefault(src_of(b), []).append(b)
+    keys = list(blocks)
+    if chronological:
+        keys.sort(key=natural_key)
+    return hook + [b for k in keys for b in blocks[k]] + ending
+
+
+def scene_splits(shot_sources: list[str], skip_first: bool = True, skip_last: bool = True) -> int:
+    """How many sources appear in more than one non-adjacent run (ignoring hook and ending)."""
+    seq = shot_sources[1 if skip_first else 0: len(shot_sources) - (1 if skip_last else 0)]
+    runs = [s for i, s in enumerate(seq) if i == 0 or seq[i - 1] != s]
+    return sum(1 for s in set(runs) if runs.count(s) > 1)
+
+
 def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfig = DirectorConfig()):
     seg_len = {}
     for s in catalog.segments.values():
@@ -140,6 +169,9 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
             b["id"] = b.get("id") or f"b{i + 1}"
             if b.get("verdict") not in ("red", "black"):
                 b["verdict"] = None
+            if b.get("scene") not in catalog.sources:
+                b["scene"] = "any"
+        outline["header"] = (outline.get("header") or outline.get("theme") or "")[:12]
         return {"outline": outline, "round": 0, "issues": {}, "log": [f"director: {len(beats)} beats"]}
 
     def fan_out(state: State):
@@ -151,7 +183,9 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
 
     async def select(payload: dict) -> dict:
         beat = payload["beat"]
-        cands = [c for c in catalog.search(beat.get("query") or beat.get("punch") or "", k=cfg.k + 4)
+        scene = beat.get("scene")
+        scope = {scene} if scene in catalog.sources else None  # a beat only looks inside its own scene
+        cands = [c for c in catalog.search(beat.get("query") or beat.get("punch") or "", k=cfg.k + 4, sources=scope)
                  if c["segment_id"] not in payload.get("taken", [])][: cfg.k]
         fb = ""
         if payload.get("feedback"):
@@ -202,12 +236,7 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
             return next((c["source"] for c in cands.get(b["id"], []) if c["segment_id"] == sels[b["id"]]["segment_id"]),
                         "")
 
-        if outline.get("order") == "chronological":
-            hook = [b for b in beats if b.get("purpose") == "hook"][:1]
-            ending = [b for b in beats if b.get("purpose") == "ending" and b not in hook][-1:]
-            middle = [b for b in beats if b not in hook and b not in ending]
-            middle.sort(key=lambda b: (natural_key(src_of(b)), float(sels[b["id"]].get("in_s", 0))))
-            beats = hook + middle + ending
+        beats = order_beats(beats, src_of, sels, chronological=outline.get("order") == "chronological")
         shots = []
         for b in beats:
             sel = sels[b["id"]]
@@ -238,8 +267,10 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
                 ovs.append(Overlay("endcard", b["endcard"], round(dur * 0.5, 2), None, sfx="ding"))
             speech = bool(sel.get("dialogue"))
             shots.append(Shot(src_of(b), round(a, 2), round(e, 2), 1.0 if speech else 0.3, b["id"], ovs))
-        plan = EditPlan(title=outline.get("header") or "draft", header=outline.get("header") or "",
-                        music=cfg.music, shots=shots, notes=json.dumps({"target_s": outline.get("target_s")}))
+        plan = EditPlan(title=outline.get("theme") or outline.get("header") or "draft", header=outline.get("header") or "",
+                        music=cfg.music, shots=shots,
+                        notes=json.dumps({"target_s": outline.get("target_s"), "theme": outline.get("theme")},
+                                         ensure_ascii=False))
         return {"plan": plan.to_dict()}
 
     def fit_duration(plan: EditPlan, target: float) -> list[str]:

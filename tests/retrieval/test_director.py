@@ -10,8 +10,9 @@ from open_storyline.timeline.plan import EditPlan, validate
 LINES = [Line("L0", "clips/rgb.mp4", 0.5, 2.0, "红色电话响了"), Line("L1", "clips/rgb.mp4", 4.0, 5.5, "咸到爆炸")]
 OUTLINE = {"target_s": 6, "order": "chronological", "header": "测试", "beats": [
     {"id": "b1", "purpose": "hook", "query": "咸到爆炸", "target_s": 2, "punch": "踩雷了", "verdict": None},
-    {"id": "b2", "purpose": "setup", "query": "红色的电话画面", "target_s": 2, "card": "第1顿", "verdict": "black"},
-    {"id": "b3", "purpose": "ending", "query": "白色的走廊", "target_s": 2, "endcard": "评论区见", "verdict": None},
+    {"id": "b2", "purpose": "setup", "scene": "clips/rgb.mp4", "query": "红色的电话画面", "target_s": 2,
+     "card": "第1顿", "verdict": "black"},
+    {"id": "b3", "purpose": "ending", "scene": "walk/white.mp4", "query": "白色的走廊", "target_s": 2, "endcard": "评论区见", "verdict": None},
 ]}
 
 
@@ -147,3 +148,24 @@ def test_fault_injection_runner_smoke(fake_index, monkeypatch, tmp_path):
     assert rows["resilient"]["complete"]
     assert rows["resilient"]["calls_failed"] <= rows["none"]["calls_failed"]
     assert rows["none"]["injected"] or rows["resilient"]["injected"]
+
+
+def test_scene_blocks_are_contiguous_and_chronological():
+    from open_storyline.director.graph import order_beats, scene_splits
+
+    beats = [{"id": "h", "purpose": "hook"}, {"id": "a1", "purpose": "setup"}, {"id": "b1", "purpose": "setup"},
+             {"id": "a2", "purpose": "verdict"}, {"id": "c1", "purpose": "setup"}, {"id": "e", "purpose": "ending"}]
+    src = {"h": "clip15.mp4", "a1": "clip5.mp4", "a2": "clip5.mp4", "b1": "clip22.mp4", "c1": "clip14.mp4",
+           "e": "clip43.mp4"}
+    out = [b["id"] for b in order_beats(beats, lambda b: src[b["id"]], {}, chronological=True)]
+    assert out == ["h", "a1", "a2", "c1", "b1", "e"]  # clip5 block, clip14, clip22
+    narrative = [b["id"] for b in order_beats(beats, lambda b: src[b["id"]], {}, chronological=False)]
+    assert narrative == ["h", "a1", "a2", "b1", "c1", "e"]
+    assert scene_splits(["x", "a", "b", "a", "y"]) == 1 and scene_splits(["x", "a", "a", "b", "y"]) == 0
+
+
+def test_search_can_be_restricted_to_one_scene(fake_index):
+    index, _ = fake_index
+    cat = Catalog(index, LINES, sources=["clips/rgb.mp4", "walk/white.mp4"], encoder=FakeColourEncoder())
+    got = cat.search("红色的电话画面", k=3, sources={"walk/white.mp4"})
+    assert got and all(c["source"] == "walk/white.mp4" for c in got)

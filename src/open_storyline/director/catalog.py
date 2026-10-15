@@ -101,11 +101,12 @@ class Catalog:
     def lines_for(self, source: str, start: float, end: float, pad: float = 0.0) -> list[Line]:
         return [ln for ln in self.lines if ln.source == source and ln.start < end + pad and ln.end > start - pad]
 
-    def search(self, query: str, k: int = 8) -> list[dict]:
-        """Top-k shots of the allowed sources, each with its speech lines."""
+    def search(self, query: str, k: int = 8, sources: Optional[set[str]] = None) -> list[dict]:
+        """Top-k shots of the allowed sources (optionally only ``sources``), each with its speech lines."""
         found = []
-        for p in self.retriever.search(query, k=k * 6):
-            if p.segment_id not in self.segments:
+        pool = len(self.segments) if sources else k * 6
+        for p in self.retriever.search(query, k=max(pool, k)):
+            if p.segment_id not in self.segments or (sources and p.asset_path not in sources):
                 continue
             found.append({
                 "segment_id": p.segment_id, "source": p.asset_path,
