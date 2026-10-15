@@ -28,13 +28,13 @@ sys.path.insert(0, str(ROOT))
 from benchmarks.run_briefs import BudgetExceeded, git_commit, load_prices, read_briefs  # noqa: E402
 
 
-def make_llm(cfg, writer, role: str, temperature: float):
+def make_llm(cfg, writer, role: str, temperature: float, max_retries: int = 2):
     from langchain_openai import ChatOpenAI
 
     from open_storyline.telemetry.meter import instrument
 
     llm = ChatOpenAI(model=cfg.llm.model, base_url=cfg.llm.base_url.rstrip("/"), api_key=cfg.llm.api_key,
-                     timeout=60, temperature=temperature, max_retries=2)
+                     timeout=60, temperature=temperature, max_retries=max_retries)
     return instrument(llm, writer, role)
 
 

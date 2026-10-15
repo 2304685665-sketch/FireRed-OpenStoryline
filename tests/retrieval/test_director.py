@@ -125,3 +125,25 @@ def test_transcript_filter_drops_fragments_and_other_languages(tmp_path):
         {"clip": "a", "start": 3, "end": 4, "lang": "<|ja|>", "text": "頑張れ大丈夫"},
     ], ensure_ascii=False), encoding="utf-8")
     assert [ln.text for ln in load_transcript(f)] == ["咸到爆炸"]
+
+
+def test_fault_injection_runner_smoke(fake_index, monkeypatch, tmp_path):
+    import types
+
+    from benchmarks import fault_injection as fi
+    from benchmarks import run_director
+
+    index, _ = fake_index
+
+    def fake_make_llm(cfg, writer, role, temperature, max_retries=2):
+        return FakeLLM(lambda m: json.dumps(OUTLINE, ensure_ascii=False) if "分镜大纲" in m else selector(m))
+
+    monkeypatch.setattr(run_director, "make_llm", fake_make_llm)
+    monkeypatch.setattr(fi, "ROOT", tmp_path)
+    args = types.SimpleNamespace(label="t", rate=0.6, seed=3, fallback_model=None)
+    brief = {"id": "x1", "brief": "测试", "media": ["clips/rgb.mp4", "walk/white.mp4"]}
+    rows = {c: asyncio.run(fi.run_config(brief, c, args, None, index, FakeColourEncoder(), LINES, {}))
+            for c in ("none", "resilient")}
+    assert rows["resilient"]["complete"]
+    assert rows["resilient"]["calls_failed"] <= rows["none"]["calls_failed"]
+    assert rows["none"]["injected"] or rows["resilient"]["injected"]

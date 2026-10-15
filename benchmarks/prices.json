@@ -14,6 +14,10 @@
     "qwen3-vl-plus": {
       "input_per_m": 1.0,
       "output_per_m": 10.0
+    },
+    "qwen-plus": {
+      "input_per_m": 0.8,
+      "output_per_m": 2.0
     }
   }
 }
