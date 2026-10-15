@@ -80,3 +80,35 @@ def test_without_critic_the_cut_line_ships(fake_index):
     assert len(s.calls) == 3
     b2 = EditPlan.from_dict(out["plan"]).shots[1]
     assert b2.in_s == 1.0  # line L0 starts at 0.5: cut off
+
+
+def test_long_speech_segments_split_into_clauses():
+    from open_storyline.director.catalog import split_line
+
+    parts = split_line(Line("L9", "a.mp4", 6.8, 15.7, "好吃吗？比较好吃多了，那吃个吧，不吃那个了。"))
+    assert [p.text for p in parts] == ["好吃吗？", "比较好吃多了，", "那吃个吧，", "不吃那个了。"]
+    assert parts[0].start == 6.8 and abs(parts[-1].end - 15.7) < 0.02 and parts[1].line_id == "L9.1"
+    assert split_line(Line("L1", "a.mp4", 0, 2, "短句，不拆")) == [Line("L1", "a.mp4", 0, 2, "短句，不拆")]
+
+
+def test_profanity_masked_in_captions():
+    from open_storyline.director.graph import mask_profanity
+
+    assert mask_profanity("你他妈这回给你填到爆") == "你××这回给你填到爆"
+
+
+def test_beat_that_makes_no_progress_is_not_retried_forever(fake_index):
+    index, _ = fake_index
+    cat = Catalog(index, LINES, sources=["clips/rgb.mp4", "walk/white.mp4"], encoder=FakeColourEncoder())
+
+    def stubborn(msg):  # always cuts line L0 in b2, ignoring feedback
+        if '"id": "b2"' in msg:
+            return json.dumps({"segment_id": "clips/rgb.mp4#000", "in_s": 1.0, "out_s": 2.5,
+                               "dialogue": [{"line_id": "L0", "text": "红色电话响了"}]})
+        return selector(msg)
+
+    s = FakeLLM(stubborn)
+    out = asyncio.run(direct("x", cat, FakeLLM(lambda m: json.dumps(OUTLINE, ensure_ascii=False)), s,
+                             DirectorConfig(max_rounds=5)))
+    assert len(s.calls) == 4  # one retry, then stopped: same issue again means no progress
+    assert "b2" in out["issues"] and any("no progress" in x for x in out["log"])

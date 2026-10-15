@@ -63,6 +63,14 @@ def has_audio(path: str) -> bool:
     return bool(out.stdout.strip())
 
 
+def check_ffmpeg() -> None:
+    """Fail early with a clear message when ffmpeg cannot burn ASS captions."""
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout
+    if not re.search(r"\bsubtitles\b", out):
+        raise RuntimeError("this ffmpeg has no 'subtitles' filter (built without libass). "
+                           "On macOS: brew reinstall ffmpeg   (Homebrew's ffmpeg includes libass)")
+
+
 def detect_crop(path: str, in_s: float, dur: float) -> str | None:
     """Crop that removes black bars in this window (ffmpeg cropdetect), or None."""
     err = run(["ffmpeg", "-hide_banner", "-ss", f"{in_s:.3f}", "-t", f"{min(dur, 3):.3f}", "-i", path,
@@ -170,6 +178,7 @@ def music_volume_expr(plan: EditPlan) -> str:
 
 def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: str | Path,
            work: str | Path | None = None, music_root: str | Path | None = None) -> dict:
+    check_ffmpeg()
     media_root, out = Path(media_root).expanduser(), Path(out)
     work = Path(work or out.parent / (out.stem + "_work"))
     work.mkdir(parents=True, exist_ok=True)

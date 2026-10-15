@@ -12,6 +12,7 @@ cannot find them.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -29,11 +30,35 @@ class Line:
     text: str
 
 
-def load_transcript(path: str | Path) -> list[Line]:
+_CLAUSE = re.compile(r"[^，。！？!?；;,]+[，。！？!?；;,]*")
+
+
+def split_line(line: Line, max_s: float = 3.5) -> list[Line]:
+    """
+    Split a long speech segment into clause-level lines at punctuation, timing each clause
+    proportionally to its length. VAD segments run up to ~20 s; a caption has to be fully
+    inside its shot, so a 9 s segment cannot be used in a 4 s shot unless it is split.
+    """
+    if line.end - line.start <= max_s:
+        return [line]
+    parts = [m.group(0).strip() for m in _CLAUSE.finditer(line.text) if m.group(0).strip()]
+    if len(parts) < 2:
+        return [line]
+    total = sum(len(x) for x in parts)
+    out, t = [], line.start
+    for j, text in enumerate(parts):
+        d = (line.end - line.start) * len(text) / total
+        out.append(Line(f"{line.line_id}.{j}", line.source, round(t, 2), round(t + d, 2), text))
+        t += d
+    return out
+
+
+def load_transcript(path: str | Path, split: bool = True) -> list[Line]:
     out = []
     for i, r in enumerate(json.loads(Path(path).read_text(encoding="utf-8"))):
         src = r["clip"] if r["clip"].endswith(".mp4") else r["clip"] + ".mp4"
-        out.append(Line(f"L{i:04d}", src, float(r["start"]), float(r["end"]), r["text"].strip()))
+        ln = Line(f"L{i:04d}", src, float(r["start"]), float(r["end"]), r["text"].strip())
+        out.extend(split_line(ln) if split else [ln])
     return out
 
 

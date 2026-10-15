@@ -93,6 +93,8 @@ class State(TypedDict, total=False):
     candidates: Annotated[dict, _merge]   # beat_id -> candidate list
     selections: Annotated[dict, _merge]   # beat_id -> selection
     issues: dict                          # beat_id -> [issue text]
+    history: Annotated[dict, _merge]      # beat_id -> issue texts seen in earlier rounds
+    retry: dict                           # beat_id -> issues to send back this round
     round: int
     plan: dict
     log: Annotated[list, _add]
@@ -106,6 +108,15 @@ class DirectorConfig:
     min_shot_s: float = 1.0
     music: Optional[str] = None
     critic: bool = True   # ablation switch: False = assemble once, no checks/repair
+
+
+PROFANITY = ("他妈", "妈逼", "我操", "操你", "卧槽", "傻逼")
+
+
+def mask_profanity(text: str) -> str:
+    for w in PROFANITY:
+        text = text.replace(w, "×" * len(w))
+    return text
 
 
 def _text_overlap(clean: str, raw: str) -> float:
@@ -132,8 +143,8 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
 
     def fan_out(state: State):
         beats = state["outline"]["beats"]
-        todo = [b for b in beats if b["id"] in state.get("issues", {})] if state.get("round") else beats
-        return [Send("select", {"beat": b, "feedback": state.get("issues", {}).get(b["id"], []),
+        todo = [b for b in beats if b["id"] in state.get("retry", {})] if state.get("round") else beats
+        return [Send("select", {"beat": b, "feedback": state.get("retry", {}).get(b["id"], []),
                                 "taken": [s["segment_id"] for bid, s in state.get("selections", {}).items()
                                           if bid != b["id"]]}) for b in todo]
 
@@ -214,7 +225,8 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
                 if ln:
                     s0, s1 = max(0.0, ln.start - a), min(dur, ln.end - a)
                     if s1 > s0:
-                        ovs.append(Overlay("dialogue", f"“{d.get('text') or ln.text}”", round(s0, 2), round(s1, 2)))
+                        ovs.append(Overlay("dialogue", f"“{mask_profanity(d.get('text') or ln.text)}”",
+                                               round(s0, 2), round(s1, 2)))
             if b.get("verdict"):
                 ovs.append(Overlay("stamp", "红榜" if b["verdict"] == "red" else "黑榜", round(dur * 0.4, 2), None,
                                    verdict=b["verdict"], sfx="thud"))
@@ -277,11 +289,18 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
             if i.level == "error" and i.where.startswith("shot "):
                 idx = int(i.where.split()[1])
                 issues.setdefault(plan.shots[idx].beat, []).append(i.message)
-        return {"issues": issues, "plan": plan.to_dict(), "round": state.get("round", 0) + 1,
-                "log": notes + [f"critic round {state.get('round', 0) + 1}: {len(issues)} beats failing"]}
+        # No-progress stop: a beat whose issues are exactly the ones it was already sent back
+        # with is not retried again (another round would spend calls for the same answer).
+        history = state.get("history", {})
+        stuck = {b for b, errs in issues.items() if sorted(errs) == sorted(history.get(b, []))}
+        retry = {b: e for b, e in issues.items() if b not in stuck}
+        return {"issues": issues, "retry": retry, "history": {b: e for b, e in issues.items()},
+                "plan": plan.to_dict(), "round": state.get("round", 0) + 1,
+                "log": notes + [f"critic round {state.get('round', 0) + 1}: {len(issues)} beats failing"
+                                + (f", {len(stuck)} not retried (no progress)" if stuck else "")]}
 
     def route(state: State):
-        if state["issues"] and state["round"] <= cfg.max_rounds:
+        if state.get("retry") and state["round"] <= cfg.max_rounds:
             return fan_out(state)
         return END
 
