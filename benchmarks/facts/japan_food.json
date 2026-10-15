@@ -1,0 +1,212 @@
+{
+ "note": "Per-scene facts for the Japan food footage. source=audio: said on camera (transcript); source=creator: told by the creator afterwards, not in the audio.",
+ "scenes": [
+  {
+   "scene": [
+    "大致_clip5.mp4"
+   ],
+   "dish": "烧卖 + 鸭葱拉面",
+   "verdict": "black",
+   "facts": [
+    {
+     "text": "烧卖有点咸",
+     "source": "creator"
+    },
+    {
+     "text": "鸭葱拉面更咸",
+     "source": "creator"
+    },
+    {
+     "text": "「哦，里面有葱」「爆汁了」",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip10.mp4"
+   ],
+   "dish": "奶油苏打",
+   "verdict": "red",
+   "facts": [
+    {
+     "text": "「哇，我的天哪」「这杯子好美呀」：颜值高",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip14.mp4",
+    "大致_clip15.mp4"
+   ],
+   "dish": "水果松饼（本来想吃舒芙蕾）",
+   "verdict": "black",
+   "facts": [
+    {
+     "text": "想吃的是舒芙蕾，上来的是水果松饼",
+     "source": "creator"
+    },
+    {
+     "text": "很难吃",
+     "source": "creator"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip18.mp4",
+    "大致_clip19.mp4"
+   ],
+   "dish": "刨冰",
+   "verdict": null,
+   "facts": [
+    {
+     "text": "「这个比较好吃多了」",
+     "source": "audio"
+    },
+    {
+     "text": "化得滴水，「也很难受其实」",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip22.mp4"
+   ],
+   "dish": "寿司",
+   "verdict": "red",
+   "facts": [
+    {
+     "text": "挺好吃",
+     "source": "creator"
+    },
+    {
+     "text": "有一个不知道什么鱼的比较腥，不是很美妙",
+     "source": "creator"
+    },
+    {
+     "text": "师傅直接放到手上「放在我手上？」",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip13.mp4",
+    "大致_clip26.mp4"
+   ],
+   "dish": "和牛烤肉",
+   "verdict": "black",
+   "facts": [
+    {
+     "text": "很腻，和牛烤肉简直灾难，从此不愿再吃",
+     "source": "creator"
+    },
+    {
+     "text": "clip13 是和牛店门口的菜单",
+     "source": "creator"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip28.mp4"
+   ],
+   "dish": "汤面",
+   "verdict": null,
+   "facts": [
+    {
+     "text": "「你肯定不爱吃，你尝尝」「我还挺（喜欢）」",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip29.mp4"
+   ],
+   "dish": "烤串",
+   "verdict": null,
+   "facts": [
+    {
+     "text": "还可以，及格分",
+     "source": "creator"
+    },
+    {
+     "text": "「这个不知道，这个也不知道，什么蛋？」认不出部位",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip32.mp4",
+    "大致_clip33.mp4"
+   ],
+   "dish": "便利店夜宵",
+   "verdict": "black",
+   "facts": [
+    {
+     "text": "「特别特别难吃」「咸到爆炸」「像吃十把盐」「直接脱水」",
+     "source": "audio"
+    },
+    {
+     "text": "「饭团配烧卖，谁想出来的吃法」",
+     "source": "audio"
+    },
+    {
+     "text": "「日本的米饭都还行」",
+     "source": "audio"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip42.mp4"
+   ],
+   "dish": "天妇罗（大阪）",
+   "verdict": "black",
+   "facts": [
+    {
+     "text": "很油",
+     "source": "creator"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip40.mp4",
+    "大致_clip41.mp4"
+   ],
+   "dish": "金枪鱼刺身（大阪）",
+   "verdict": "red",
+   "facts": [
+    {
+     "text": "油脂刚好，入口即化",
+     "source": "creator"
+    }
+   ]
+  },
+  {
+   "scene": [
+    "大致_clip43.mp4"
+   ],
+   "dish": "拉面（大阪）",
+   "verdict": null,
+   "facts": [
+    {
+     "text": "爆辣，不愧是要加钱的辣椒",
+     "source": "creator"
+    }
+   ]
+  },
+  {
+   "other_creator_facts": [
+    "下午顶着 30 多度高温拍了和服写真（素材里基本没有）",
+    "夜场棒球：信了 Gemini 选了很糟的位置，看不清也不懂规则，看了半小时灰溜溜离开"
+   ]
+  }
+ ]
+}

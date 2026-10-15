@@ -135,3 +135,17 @@ class Catalog:
             quotes = " / ".join(f"{ln.start:.0f}s「{ln.text[:24]}」" for ln in said) if said else "（无对白）"
             rows.append(f"- {src}（{length:.0f}s，{len(segs)} 个镜头）：{quotes}")
         return "\n".join(rows)
+
+
+def facts_text(facts: dict, sources: Optional[set[str]] = None) -> str:
+    """Creator facts for the scenes in ``sources`` as prompt text; each line says whether it
+    was said on camera (原声) or told by the creator afterwards (创作者补充)."""
+    rows = []
+    for sc in facts.get("scenes", []):
+        files = sc.get("scene")
+        if not files or (sources and not set(files) & sources):
+            continue
+        verdict = {"red": "红榜", "black": "黑榜"}.get(sc.get("verdict"), "未定")
+        said = "；".join(f"{f['text']}（{'原声' if f['source'] == 'audio' else '创作者补充'}）" for f in sc["facts"])
+        rows.append(f"- {'/'.join(files)}：{sc['dish']}，判定：{verdict}。{said}")
+    return "\n".join(rows)

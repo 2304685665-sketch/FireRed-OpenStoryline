@@ -169,3 +169,15 @@ def test_search_can_be_restricted_to_one_scene(fake_index):
     cat = Catalog(index, LINES, sources=["clips/rgb.mp4", "walk/white.mp4"], encoder=FakeColourEncoder())
     got = cat.search("红色的电话画面", k=3, sources={"walk/white.mp4"})
     assert got and all(c["source"] == "walk/white.mp4" for c in got)
+
+
+def test_facts_text_only_for_brief_scenes_and_marks_provenance():
+    from open_storyline.director.catalog import facts_text
+
+    facts = {"scenes": [
+        {"scene": ["a.mp4"], "dish": "寿司", "verdict": "red",
+         "facts": [{"text": "挺好吃", "source": "creator"}, {"text": "「放在我手上？」", "source": "audio"}]},
+        {"scene": ["b.mp4"], "dish": "和牛", "verdict": "black", "facts": [{"text": "很腻", "source": "creator"}]},
+        {"other_creator_facts": ["x"]}]}
+    t = facts_text(facts, {"a.mp4"})
+    assert "寿司" in t and "红榜" in t and "（创作者补充）" in t and "（原声）" in t and "和牛" not in t

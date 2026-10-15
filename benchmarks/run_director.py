@@ -60,10 +60,17 @@ async def run_one(brief, args, prices, spent_before, encoder, index, lines) -> d
     sources = None if brief.get("media", "all") == "all" else list(brief["media"])
     catalog = Catalog(index, lines, sources=sources, encoder=encoder,
                       channels=tuple(args.channels))
+    brief_text = brief["brief"]
+    if args.facts:
+        from open_storyline.director.catalog import facts_text
+
+        ft = facts_text(json.loads(Path(args.facts).read_text(encoding="utf-8")), catalog.sources)
+        if ft:
+            brief_text += ("\n\n创作者提供的事实（评价、红黑榜和主题只能依据这些和原声，不能编造）：\n" + ft)
     t0 = time.time()
     out, error, video = {}, None, None
     try:
-        out = await direct(brief["brief"], catalog, make_llm(cfg, writer, "llm", 0.4),
+        out = await direct(brief_text, catalog, make_llm(cfg, writer, "llm", 0.4),
                            make_llm(cfg, writer, "llm", 0.2),
                            DirectorConfig(critic=not args.no_critic, music=args.music))
         plan = EditPlan.from_dict(out["plan"])
@@ -82,7 +89,7 @@ async def run_one(brief, args, prices, spent_before, encoder, index, lines) -> d
     record = {
         "label": args.label, "brief_id": brief["id"], "brief": brief["brief"], "session_id": session_id,
         "media": sources or "all", "commit": git_commit(),
-        "models": {"llm": cfg.llm.model}, "channels": args.channels, "critic": not args.no_critic,
+        "models": {"llm": cfg.llm.model}, "channels": args.channels, "critic": not args.no_critic, "facts": args.facts,
         "turns": 1, "auto_replies": 0, "error": error, "videos": [video] if video else [],
         "elapsed_s": round(time.time() - t0, 1), "summary": summary,
         "unresolved_issues": out.get("issues"), "repair_rounds": out.get("round"), "log": out.get("log"),
@@ -148,6 +155,7 @@ def main() -> None:
     ap.add_argument("--channels", nargs="+", default=["visual", "speech"], choices=["visual", "speech"])
     ap.add_argument("--music", default="resource/bgms/music_0057.mp3")
     ap.add_argument("--no-critic", action="store_true")
+    ap.add_argument("--facts", default=None, help="creator facts JSON (benchmarks/facts/japan_food.json)")
     ap.add_argument("--prices", default=str(ROOT / "benchmarks" / "prices.json"))
     ap.add_argument("--ledger", default=None)
     ap.add_argument("--budget-cny", type=float, default=10.0)

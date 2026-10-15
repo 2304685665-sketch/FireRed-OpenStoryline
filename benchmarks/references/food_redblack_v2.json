@@ -1,0 +1,604 @@
+{
+ "title": "日本美食红黑榜 v2（草稿）",
+ "header": "日本美食红黑榜",
+ "music": "resource/bgms/music_0057.mp3",
+ "music_gain": 0.32,
+ "music_duck_gain": 0.07,
+ "shots": [
+  {
+   "source": "大致_clip33.mp4",
+   "in_s": 154.6,
+   "out_s": 161.0,
+   "audio": 1.0,
+   "beat": "hook",
+   "overlays": [
+    {
+     "kind": "dialogue",
+     "text": "“感觉像吃了十把盐”",
+     "start": 0.3,
+     "end": 3.1
+    },
+    {
+     "kind": "dialogue",
+     "text": "“吃完以后直接脱水”",
+     "start": 3.2,
+     "end": 6.0
+    },
+    {
+     "kind": "punch",
+     "text": "日本美食，我们踩了几个雷？",
+     "start": 0.4,
+     "end": 6.4,
+     "sfx": "scratch"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip5.mp4",
+   "in_s": 0.4,
+   "out_s": 2.6,
+   "audio": 0.3,
+   "beat": "dumplings-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第1顿 · 烧卖",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip5.mp4",
+   "in_s": 34.0,
+   "out_s": 38.2,
+   "audio": 1.0,
+   "beat": "dumplings-reaction",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第1顿 · 烧卖",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "dialogue",
+     "text": "“哦，里面有葱”",
+     "start": 1.8,
+     "end": 4.2
+    },
+    {
+     "kind": "punch",
+     "text": "烧卖有点咸……",
+     "start": 2.0,
+     "end": null
+    },
+    {
+     "kind": "stamp",
+     "text": "黑榜",
+     "start": 2.6,
+     "end": null,
+     "verdict": "black",
+     "sfx": "thud"
+    },
+    {
+     "kind": "dialogue",
+     "text": "（鸭葱拉面：更咸）",
+     "start": 3.0,
+     "end": null
+    }
+   ]
+  },
+  {
+   "source": "大致_clip10.mp4",
+   "in_s": 26.6,
+   "out_s": 31.2,
+   "audio": 1.0,
+   "beat": "soda",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第2顿 · 奶油苏打",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "dialogue",
+     "text": "“哇，我的天哪”",
+     "start": 2.0,
+     "end": 4.6
+    },
+    {
+     "kind": "punch",
+     "text": "颜值满分",
+     "start": 2.6,
+     "end": 4.6
+    },
+    {
+     "kind": "stamp",
+     "text": "红榜",
+     "start": 2.8,
+     "end": null,
+     "verdict": "red",
+     "sfx": "ding"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip14.mp4",
+   "in_s": 0.0,
+   "out_s": 2.6,
+   "audio": 0.3,
+   "beat": "pancake-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第3顿 · 舒芙蕾",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "punch",
+     "text": "我们点的：舒芙蕾",
+     "start": 0.2,
+     "end": 2.6
+    }
+   ]
+  },
+  {
+   "source": "大致_clip14.mp4",
+   "in_s": 8.0,
+   "out_s": 10.8,
+   "audio": 0.3,
+   "beat": "pancake-reveal",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第3顿 · 舒芙蕾？",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "上桌的：水果松饼",
+     "start": 0.0,
+     "end": 2.8,
+     "sfx": "scratch"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip15.mp4",
+   "in_s": 0.2,
+   "out_s": 3.4,
+   "audio": 0.4,
+   "beat": "pancake-verdict",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第3顿 · 水果松饼",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "而且很难吃",
+     "start": 0.2,
+     "end": null
+    },
+    {
+     "kind": "stamp",
+     "text": "黑榜",
+     "start": 0.9,
+     "end": null,
+     "verdict": "black",
+     "sfx": "thud"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip19.mp4",
+   "in_s": 4.0,
+   "out_s": 6.4,
+   "audio": 0.3,
+   "beat": "ice-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第4顿 · 刨冰",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip19.mp4",
+   "in_s": 15.3,
+   "out_s": 19.4,
+   "audio": 1.0,
+   "beat": "ice-reaction",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第4顿 · 刨冰",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "dialogue",
+     "text": "“滴水呗……”",
+     "start": 0.2,
+     "end": 2.4
+    },
+    {
+     "kind": "punch",
+     "text": "好吃，但化得比吃得快",
+     "start": 1.4,
+     "end": 4.1
+    }
+   ]
+  },
+  {
+   "source": "大致_clip22.mp4",
+   "in_s": 0.5,
+   "out_s": 3.4,
+   "audio": 1.0,
+   "beat": "sushi-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第5顿 · 寿司",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "dialogue",
+     "text": "“这放在这里呀，我的天”",
+     "start": 0.2,
+     "end": 2.9
+    }
+   ]
+  },
+  {
+   "source": "大致_clip22.mp4",
+   "in_s": 12.3,
+   "out_s": 15.4,
+   "audio": 1.0,
+   "beat": "sushi-reaction",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第5顿 · 寿司",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "dialogue",
+     "text": "“放在我手上？”",
+     "start": 0.3,
+     "end": 2.4
+    },
+    {
+     "kind": "punch",
+     "text": "好吃！除了一条很腥的鱼",
+     "start": 1.0,
+     "end": null
+    },
+    {
+     "kind": "stamp",
+     "text": "红榜",
+     "start": 1.6,
+     "end": null,
+     "verdict": "red",
+     "sfx": "ding"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip13.mp4",
+   "in_s": 0.0,
+   "out_s": 1.45,
+   "audio": 0.0,
+   "beat": "wagyu-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第6顿 · 和牛烤肉",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "punch",
+     "text": "全网都说必吃",
+     "start": 0.1,
+     "end": 1.45
+    }
+   ]
+  },
+  {
+   "source": "大致_clip26.mp4",
+   "in_s": 1.0,
+   "out_s": 3.2,
+   "audio": 0.3,
+   "beat": "wagyu-1",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第6顿 · 和牛烤肉",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "第一口：好香",
+     "start": 0.1,
+     "end": 2.2
+    }
+   ]
+  },
+  {
+   "source": "大致_clip26.mp4",
+   "in_s": 4.0,
+   "out_s": 6.0,
+   "audio": 0.3,
+   "beat": "wagyu-2",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第6顿 · 和牛烤肉",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "第二口：有点腻",
+     "start": 0.1,
+     "end": 2.0
+    }
+   ]
+  },
+  {
+   "source": "大致_clip26.mp4",
+   "in_s": 6.6,
+   "out_s": 9.6,
+   "audio": 0.3,
+   "beat": "wagyu-verdict",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第6顿 · 和牛烤肉",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "第三口：此生不再吃",
+     "start": 0.1,
+     "end": 3.0
+    },
+    {
+     "kind": "stamp",
+     "text": "黑榜",
+     "start": 0.8,
+     "end": 3.0,
+     "verdict": "black",
+     "sfx": "thud"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip29.mp4",
+   "in_s": 0.0,
+   "out_s": 4.6,
+   "audio": 1.0,
+   "beat": "yakitori",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第7顿 · 烤串",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "dialogue",
+     "text": "“这个不知道，这个也不知道”",
+     "start": 0.2,
+     "end": 3.2
+    },
+    {
+     "kind": "punch",
+     "text": "一串都不认识，但及格",
+     "start": 2.0,
+     "end": 4.6
+    }
+   ]
+  },
+  {
+   "source": "大致_clip32.mp4",
+   "in_s": 8.6,
+   "out_s": 12.2,
+   "audio": 1.0,
+   "beat": "konbini-setup",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第8顿 · 便利店夜宵",
+     "start": 0,
+     "end": null,
+     "sfx": "pop"
+    },
+    {
+     "kind": "punch",
+     "text": "最后一晚：便利店测评",
+     "start": 0.2,
+     "end": 3.6
+    }
+   ]
+  },
+  {
+   "source": "大致_clip33.mp4",
+   "in_s": 0.3,
+   "out_s": 5.8,
+   "audio": 1.0,
+   "beat": "konbini-1",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第8顿 · 便利店夜宵",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "dialogue",
+     "text": "“大家记住，这个东西特别难吃”",
+     "start": 0.2,
+     "end": 5.3
+    }
+   ]
+  },
+  {
+   "source": "大致_clip33.mp4",
+   "in_s": 12.0,
+   "out_s": 15.2,
+   "audio": 1.0,
+   "beat": "konbini-verdict",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "第8顿 · 便利店夜宵",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "dialogue",
+     "text": "“特别特别咸，咸到爆炸”",
+     "start": 0.1,
+     "end": 3.0
+    },
+    {
+     "kind": "stamp",
+     "text": "黑榜",
+     "start": 1.0,
+     "end": 3.2,
+     "verdict": "black",
+     "sfx": "thud"
+    }
+   ]
+  },
+  {
+   "source": "大致_clip40.mp4",
+   "in_s": 0.4,
+   "out_s": 1.6,
+   "audio": 0.2,
+   "beat": "montage",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "大阪 · 金枪鱼",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "入口即化",
+     "start": 0.0,
+     "end": null
+    }
+   ]
+  },
+  {
+   "source": "大致_clip41.mp4",
+   "in_s": 0.5,
+   "out_s": 1.7,
+   "audio": 0.2,
+   "beat": "montage",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "大阪 · 金枪鱼",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "入口即化",
+     "start": 0.0,
+     "end": null
+    }
+   ]
+  },
+  {
+   "source": "大致_clip42.mp4",
+   "in_s": 2.0,
+   "out_s": 3.2,
+   "audio": 0.2,
+   "beat": "montage",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "大阪 · 天妇罗",
+     "start": 0.0,
+     "end": null
+    },
+    {
+     "kind": "punch",
+     "text": "好油",
+     "start": 0.0,
+     "end": null
+    }
+   ]
+  },
+  {
+   "source": "大致_clip35.mp4",
+   "in_s": 4.2,
+   "out_s": 5.4,
+   "audio": 0.2,
+   "beat": "montage",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "大阪 · 继续吃",
+     "start": 0.0,
+     "end": null
+    }
+   ]
+  },
+  {
+   "source": "大致_clip43.mp4",
+   "in_s": 0.5,
+   "out_s": 7.2,
+   "audio": 0.4,
+   "beat": "ending",
+   "overlays": [
+    {
+     "kind": "card",
+     "text": "最后一碗 · 加钱的辣拉面",
+     "start": 0,
+     "end": 3.0,
+     "sfx": "pop"
+    },
+    {
+     "kind": "punch",
+     "text": "爆辣！不愧是加钱的辣椒",
+     "start": 0.4,
+     "end": 3.0
+    },
+    {
+     "kind": "endcard",
+     "text": "你在日本踩过什么雷？\n评论区见",
+     "start": 3.2,
+     "end": 6.7,
+     "sfx": "ding"
+    }
+   ]
+  }
+ ],
+ "notes": "Reference edit v2: verdicts from creator facts (benchmarks/facts/japan_food.json)."
+}
