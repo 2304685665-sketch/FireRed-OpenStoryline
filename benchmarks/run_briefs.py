@@ -36,7 +36,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, str(ROOT))  # some upstream modules import `src.open_storyline...`
 sys.path.insert(0, str(ROOT))  # upstream modules also import themselves as `src.open_storyline...`
 
 AUTO_REPLY = "请按你的判断直接完成剪辑并导出成片，不需要再向我确认。"
