@@ -110,6 +110,7 @@ class DirectorConfig:
     critic: bool = True   # ablation switch: False = assemble once, no checks/repair
 
 
+CAPTION_CHARS_PER_S = 5.0
 PROFANITY = ("他妈", "妈逼", "我操", "操你", "卧槽", "傻逼")
 
 
@@ -224,6 +225,9 @@ def build_graph(catalog: Catalog, director_llm, selector_llm, cfg: DirectorConfi
                 ln = catalog.lines_by_id.get(d.get("line_id"))
                 if ln:
                     s0, s1 = max(0.0, ln.start - a), min(dur, ln.end - a)
+                    # captions may stay on screen after the words end, long enough to read
+                    text = d.get("text") or ln.text
+                    s1 = min(dur, max(s1, s0 + len(text) / CAPTION_CHARS_PER_S))
                     if s1 > s0:
                         ovs.append(Overlay("dialogue", f"“{mask_profanity(d.get('text') or ln.text)}”",
                                                round(s0, 2), round(s1, 2)))

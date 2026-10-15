@@ -112,3 +112,16 @@ def test_beat_that_makes_no_progress_is_not_retried_forever(fake_index):
                              DirectorConfig(max_rounds=5)))
     assert len(s.calls) == 4  # one retry, then stopped: same issue again means no progress
     assert "b2" in out["issues"] and any("no progress" in x for x in out["log"])
+
+
+def test_transcript_filter_drops_fragments_and_other_languages(tmp_path):
+    from open_storyline.director.catalog import load_transcript
+
+    f = tmp_path / "t.json"
+    f.write_text(json.dumps([
+        {"clip": "a", "start": 0, "end": 1, "lang": "<|zh|>", "text": "咸到爆炸"},
+        {"clip": "a", "start": 1, "end": 2, "lang": "<|en|>", "text": "Yeah."},
+        {"clip": "a", "start": 2, "end": 3, "lang": "<|zh|>", "text": "嗯。"},
+        {"clip": "a", "start": 3, "end": 4, "lang": "<|ja|>", "text": "頑張れ大丈夫"},
+    ], ensure_ascii=False), encoding="utf-8")
+    assert [ln.text for ln in load_transcript(f)] == ["咸到爆炸"]

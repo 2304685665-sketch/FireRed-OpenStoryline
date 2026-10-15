@@ -53,9 +53,21 @@ def split_line(line: Line, max_s: float = 3.5) -> list[Line]:
     return out
 
 
-def load_transcript(path: str | Path, split: bool = True) -> list[Line]:
+_CJK = re.compile(r"[\u4e00-\u9fff]")
+
+
+def usable(record: dict, min_cjk: int = 3) -> bool:
+    """Keep Chinese/Cantonese speech with at least a few characters; drop fragments such as
+    "Yeah。" or one-character mis-recognitions that would make bad captions."""
+    lang = str(record.get("lang", "")).strip("<|>")
+    return lang in ("zh", "yue", "") and len(_CJK.findall(record.get("text", ""))) >= min_cjk
+
+
+def load_transcript(path: str | Path, split: bool = True, min_cjk: int = 3) -> list[Line]:
     out = []
     for i, r in enumerate(json.loads(Path(path).read_text(encoding="utf-8"))):
+        if not usable(r, min_cjk):
+            continue
         src = r["clip"] if r["clip"].endswith(".mp4") else r["clip"] + ".mp4"
         ln = Line(f"L{i:04d}", src, float(r["start"]), float(r["end"]), r["text"].strip())
         out.extend(split_line(ln) if split else [ln])
