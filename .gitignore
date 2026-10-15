@@ -74,3 +74,5 @@ data/**
 !data/prompts/**
 resource/**.venv/
 benchmarks/results/*.jsonl
+runs/
+models/
