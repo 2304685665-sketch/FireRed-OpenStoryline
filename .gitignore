@@ -72,4 +72,5 @@ data/**
 !data/elements_v2/**
 !data/prompts/
 !data/prompts/**
-resource/**
+resource/**.venv/
+benchmarks/results/*.jsonl

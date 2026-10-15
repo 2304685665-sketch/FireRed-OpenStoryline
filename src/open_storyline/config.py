@@ -264,7 +264,30 @@ class Settings(ConfigBaseModel):
 def load_settings(config_path: str | Path) -> Settings:
     p = Path(config_path).expanduser().resolve()
     data = tomllib.loads(p.read_text(encoding="utf-8"))
+    apply_env_overrides(data)
     return Settings.model_validate(data, context={"config_dir": p.parent})
+
+
+# Secrets and endpoints can come from the environment so config.toml (tracked by git)
+# never has to contain an API key. Non-empty environment values win over the file.
+ENV_OVERRIDES = {
+    ("llm", "model"): "OPENSTORYLINE_LLM_MODEL",
+    ("llm", "base_url"): "OPENSTORYLINE_LLM_BASE_URL",
+    ("llm", "api_key"): "OPENSTORYLINE_LLM_API_KEY",
+    ("vlm", "model"): "OPENSTORYLINE_VLM_MODEL",
+    ("vlm", "base_url"): "OPENSTORYLINE_VLM_BASE_URL",
+    ("vlm", "api_key"): "OPENSTORYLINE_VLM_API_KEY",
+    ("search_media", "pexels_api_key"): "OPENSTORYLINE_PEXELS_API_KEY",
+}
+
+
+def apply_env_overrides(data: dict, environ=None) -> dict:
+    environ = os.environ if environ is None else environ
+    for (section, key), var in ENV_OVERRIDES.items():
+        value = environ.get(var, "").strip()
+        if value:
+            data.setdefault(section, {})[key] = value
+    return data
 
 def default_config_path() -> str:
     return os.getenv("OPENSTORYLINE_CONFIG", "config.toml")

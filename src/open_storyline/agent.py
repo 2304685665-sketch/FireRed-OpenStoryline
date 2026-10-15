@@ -17,6 +17,7 @@ from open_storyline.nodes.node_manager import NodeManager
 from open_storyline.mcp.hooks.chat_middleware import handle_tool_errors, on_progress, log_tool_request
 from open_storyline.mcp.sampling_handler import make_sampling_callback
 from open_storyline.skills.skills_io import load_skills
+from open_storyline.telemetry.meter import TraceWriter, instrument, make_tool_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,7 @@ async def build_agent(
     *,
     llm_override: Optional[dict] = None,
     vlm_override: Optional[dict] = None,
+    trace: Optional[TraceWriter] = None,
 ):
     def _get(override: Optional[dict], key: str, default: Any) -> Any:
         return (override.get(key) if isinstance(override, dict) and key in override else default)
@@ -181,8 +183,10 @@ async def build_agent(
         timeout=llm_timeout,
         temperature=llm_temperature,
         streaming=True,
+        stream_usage=True,  # token usage on streamed responses (for accounting)
         max_retries=llm_max_retries,
     )
+    instrument(llm, trace, "llm")
 
     # 2) VLM: same priority as above
     vlm_model = _get(vlm_override, "model", cfg.vlm.model)
@@ -207,6 +211,7 @@ async def build_agent(
         temperature=vlm_temperature,
         max_retries=vlm_max_retries,
     )
+    instrument(vlm, trace, "vlm")
 
     sampling_callback = make_sampling_callback(llm, vlm)
 
@@ -236,7 +241,7 @@ async def build_agent(
     agent = create_agent(
         model=llm,
         tools=tools+skills,
-        middleware=[log_tool_request, handle_tool_errors],
+        middleware=[make_tool_tracer(trace), log_tool_request, handle_tool_errors],
         store=store,
         context_schema=ClientContext,
     )
