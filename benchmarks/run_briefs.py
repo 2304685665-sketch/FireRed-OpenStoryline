@@ -47,7 +47,8 @@ class BudgetExceeded(RuntimeError):
 
 def load_prices(path: Path) -> dict[str, tuple[float, float]]:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    return {m: (v["input_per_m"], v["output_per_m"]) for m, v in raw["models"].items()}
+    return {m: (v["input_per_m"], v["output_per_m"], v.get("cached_input_per_m", v["input_per_m"]))
+            for m, v in raw["models"].items()}
 
 
 def read_briefs(path: Path) -> list[dict]:
@@ -81,7 +82,11 @@ def git_commit() -> str:
 
 
 def produced_videos(run_dir: Path) -> list[str]:
-    return sorted(str(p) for p in run_dir.rglob("*.mp4"))
+    """Rendered videos of a session. The MCP server writes renders to its cache dir
+    (.storyline/.server_cache/<session>/render_video_*), not to outputs/<session>."""
+    cache = ROOT / ".storyline" / ".server_cache" / run_dir.name
+    found = list(run_dir.rglob("*.mp4")) + list(cache.glob("render_video_*/*.mp4"))
+    return sorted({str(p) for p in found})
 
 
 async def run_one(brief: dict, args, prices, spent_before: float) -> dict:

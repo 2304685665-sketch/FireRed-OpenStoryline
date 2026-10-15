@@ -1,12 +1,19 @@
 {
   "currency": "CNY",
-  "note": "Estimates for accounting only. Verify against the providers' pricing pages before reporting cost; DeepSeek input assumed cache-miss.",
+  "note": "Estimates for accounting only (CNY per 1M tokens). Verify against the providers' pricing pages before reporting cost. Cached input = provider-side prefix cache hits, billed lower.",
   "sources": {
     "deepseek": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
     "dashscope": "https://help.aliyun.com/zh/model-studio/billing/"
   },
   "models": {
-    "deepseek-chat": {"input_per_m": 2.0, "output_per_m": 3.0},
-    "qwen3-vl-plus": {"input_per_m": 1.0, "output_per_m": 10.0}
+    "deepseek-chat": {
+      "input_per_m": 2.0,
+      "output_per_m": 3.0,
+      "cached_input_per_m": 0.2
+    },
+    "qwen3-vl-plus": {
+      "input_per_m": 1.0,
+      "output_per_m": 10.0
+    }
   }
 }

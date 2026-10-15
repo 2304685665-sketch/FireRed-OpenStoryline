@@ -20,7 +20,7 @@ import json
 import threading
 import time
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -46,18 +46,26 @@ class TraceWriter:
             f.write(line + "\n")
 
 
-def _usage(response) -> tuple[int | None, int | None]:
-    """Token usage from an LLMResult (works for streaming with stream_usage=True)."""
+def _usage(response) -> tuple[int | None, int | None, int | None]:
+    """(input, output, cached input) tokens from an LLMResult; works with stream_usage=True.
+
+    Cached input tokens (provider-side prefix cache, e.g. DeepSeek context caching) are
+    billed at a lower rate, so they are recorded separately when the provider reports them.
+    """
     for gens in response.generations or []:
         for g in gens:
             msg = getattr(g, "message", None)
             um = getattr(msg, "usage_metadata", None) if msg is not None else None
             if um:
-                return um.get("input_tokens"), um.get("output_tokens")
+                cached = (um.get("input_token_details") or {}).get("cache_read")
+                return um.get("input_tokens"), um.get("output_tokens"), cached
     tu = (response.llm_output or {}).get("token_usage") or {}
     if tu:
-        return tu.get("prompt_tokens"), tu.get("completion_tokens")
-    return None, None
+        cached = tu.get("prompt_cache_hit_tokens")
+        if cached is None:
+            cached = (tu.get("prompt_tokens_details") or {}).get("cached_tokens")
+        return tu.get("prompt_tokens"), tu.get("completion_tokens"), cached
+    return None, None, None
 
 
 class CallMeter(AsyncCallbackHandler):
@@ -96,10 +104,10 @@ class CallMeter(AsyncCallbackHandler):
 
     def _record(self, run_id, response, error):
         t0, tool, n_images, t_start = self._start.pop(run_id, (self.clock(), CURRENT_TOOL.get(), 0, time.time()))
-        tin, tout = _usage(response) if response is not None else (None, None)
+        tin, tout, tcache = _usage(response) if response is not None else (None, None, None)
         self.writer.write({
             "kind": "model_call", "role": self.role, "model": self.model, "tool": tool,
-            "images": n_images, "input_tokens": tin, "output_tokens": tout,
+            "images": n_images, "input_tokens": tin, "output_tokens": tout, "cached_input_tokens": tcache,
             "latency_s": round(self.clock() - t0, 3), "ok": error is None,
             "error": type(error).__name__ if error is not None else None, "t_start": t_start, "ts": time.time(),
         })
@@ -153,15 +161,18 @@ def load_trace(path: str | Path) -> list[dict[str, Any]]:
 
 def summarize(records: list[dict[str, Any]], prices: dict[str, tuple[float, float]] | None = None) -> dict[str, Any]:
     """
-    Per-run totals. ``prices`` maps model -> (CNY per 1M input tokens, CNY per 1M output tokens);
-    cost is None when a model has no price or a call reported no usage.
+    Per-run totals. ``prices`` maps model -> (CNY per 1M input, CNY per 1M output[, CNY per 1M
+    cached input]); cached input tokens are billed at the third rate when given. Cost is None
+    when a model has no price or a call reported no usage.
     """
     prices = prices or {}
     calls = [r for r in records if r.get("kind") == "model_call"]
     tools = [r for r in records if r.get("kind") == "tool_call"]
     by_role: dict[str, dict[str, Any]] = defaultdict(lambda: {"calls": 0, "failed": 0, "input_tokens": 0,
-                                                               "output_tokens": 0, "images": 0, "latency_s": 0.0})
+                                                               "output_tokens": 0, "cached_input_tokens": 0,
+                                                               "images": 0, "latency_s": 0.0})
     by_tool: dict[str, int] = defaultdict(int)
+    tokens_by_tool: dict[str, int] = defaultdict(int)
     cost, cost_known, missing_usage = 0.0, True, 0
 
     def owner(c):
@@ -186,18 +197,25 @@ def summarize(records: list[dict[str, Any]], prices: dict[str, tuple[float, floa
             missing_usage += int(c["ok"])
         r["input_tokens"] += tin or 0
         r["output_tokens"] += tout or 0
-        by_tool[owner(c)] += 1
+        cached = min(c.get("cached_input_tokens") or 0, tin or 0)
+        r["cached_input_tokens"] += cached
+        who = owner(c)
+        by_tool[who] += 1
+        tokens_by_tool[who] += tin or 0
         p = prices.get(c.get("model", ""))
         if p is None or (c["ok"] and (tin is None or tout is None)):
             cost_known = False
         else:
-            cost += (tin or 0) / 1e6 * p[0] + (tout or 0) / 1e6 * p[1]
+            cache_rate = p[2] if len(p) > 2 else p[0]
+            cost += ((tin or 0) - cached) / 1e6 * p[0] + cached / 1e6 * cache_rate + (tout or 0) / 1e6 * p[1]
     ts = [r["ts"] for r in records if "ts" in r]
     return {
         "model_calls": len(calls),
         "by_role": dict(by_role),
         "model_calls_by_tool": dict(sorted(by_tool.items(), key=lambda kv: -kv[1])),
+        "input_tokens_by_tool": dict(sorted(tokens_by_tool.items(), key=lambda kv: -kv[1])),
         "tool_calls": len(tools),
+        "tool_calls_by_name": dict(sorted(Counter(t["tool"] for t in tools).items(), key=lambda kv: -kv[1])),
         "tool_failures": sum(1 for t in tools if not t["ok"]),
         "tools_sequence": [t["tool"] for t in tools],
         "calls_missing_usage": missing_usage,

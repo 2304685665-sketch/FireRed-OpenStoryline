@@ -107,3 +107,26 @@ def test_env_overrides_keep_keys_out_of_config():
                                "OPENSTORYLINE_LLM_MODEL": "  "})
     assert data["llm"] == {"api_key": "sk-1", "model": "x"}
     assert data["vlm"]["model"] == "qwen3-vl-plus"
+
+
+def test_cached_input_tokens_billed_at_cache_rate(tmp_path):
+    w = TraceWriter(tmp_path / "t.jsonl")
+    msg = AIMessage(content="x", usage_metadata={"input_tokens": 1000, "output_tokens": 0, "total_tokens": 1000,
+                                                 "input_token_details": {"cache_read": 800}})
+    m = instrument(GenericFakeChatModel(messages=iter([msg])), w, "llm")
+    asyncio.run(m.ainvoke("hi"))
+    s = summarize(load_trace(w.path), {"": (2.0, 3.0, 0.2)})
+    assert s["by_role"]["llm"]["cached_input_tokens"] == 800
+    assert s["cost_cny"] == pytest.approx((200 * 2.0 + 800 * 0.2) / 1e6)
+
+
+def test_videos_found_in_server_cache(tmp_path, monkeypatch):
+    from benchmarks import run_briefs
+
+    monkeypatch.setattr(run_briefs, "ROOT", tmp_path)
+    run_dir = tmp_path / "outputs" / "sess1"
+    run_dir.mkdir(parents=True)
+    cache = tmp_path / ".storyline" / ".server_cache" / "sess1" / "render_video_1"
+    cache.mkdir(parents=True)
+    (cache / "out.mp4").write_bytes(b"0")
+    assert run_briefs.produced_videos(run_dir) == [str(cache / "out.mp4")]
