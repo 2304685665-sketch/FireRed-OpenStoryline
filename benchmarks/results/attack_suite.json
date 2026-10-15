@@ -1,0 +1,23 @@
+{
+ "seed": 20261016,
+ "attacks": 200,
+ "by_category": {
+  "path": 80,
+  "ass": 60,
+  "flood": 20,
+  "resource": 40
+ },
+ "succeeded_without_guard": 175,
+ "without_guard_by_category": {
+  "path": 55,
+  "ass": 60,
+  "flood": 20,
+  "resource": 40
+ },
+ "succeeded_with_guard": 0,
+ "with_guard_by_category": {},
+ "legit_plans": 201,
+ "legit_real_plans": 1,
+ "legit_blocked": 0,
+ "legit_text_altered": 0
+}

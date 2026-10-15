@@ -24,6 +24,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from open_storyline.timeline.guard import check_plan
 from open_storyline.timeline.plan import EditPlan, Overlay, source_durations, validate
 
 SFX = {  # name -> ffmpeg aevalsrc expression, duration
@@ -182,6 +183,8 @@ def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: s
     media_root, out = Path(media_root).expanduser(), Path(out)
     work = Path(work or out.parent / (out.stem + "_work"))
     work.mkdir(parents=True, exist_ok=True)
+    # the plan is model output: confine files, bound numbers, neutralise caption markup
+    guard_notes = check_plan(plan, media_root, music_root if plan.music else None)
     issues = validate(plan, source_durations(media_root, plan, probe_duration))
     errors = [i for i in issues if i.level == "error"]
     if errors:
@@ -239,7 +242,7 @@ def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: s
          "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", "-b:a", "192k",
          "-movflags", "+faststart", "-t", f"{total:.3f}", str(out)])
     return {"out": str(out), "duration": total, "shots": len(plan.shots), "shots_rendered": rendered,
-            "warnings": [f"{i.where}: {i.message}" for i in issues if i.level == "warning"]}
+            "warnings": [f"{i.where}: {i.message}" for i in issues if i.level == "warning"], "guard": guard_notes}
 
 
 def main() -> None:
