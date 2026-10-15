@@ -111,6 +111,15 @@ async def main_async(args) -> None:
     ledger = Path(args.ledger)
     ledger.parent.mkdir(parents=True, exist_ok=True)
     spent = 0.0
+    if args.skip_done and ledger.exists():
+        done = set()
+        for ln in ledger.read_text(encoding="utf-8").splitlines():
+            r = json.loads(ln)
+            if not r.get("error") and r.get("videos"):
+                done.add(r["brief_id"])
+                spent += (r.get("summary") or {}).get("cost_cny") or 0.0
+        briefs = [b for b in briefs if b["id"] not in done]
+        print(f"skipping {len(done)} briefs already done in {ledger.name} ({spent:.2f} CNY counted)")
     for b in briefs:
         if spent >= args.budget_cny:
             print(f"budget reached ({spent:.2f} CNY); stopping before {b['id']}")
@@ -143,6 +152,7 @@ def main() -> None:
     ap.add_argument("--ledger", default=None)
     ap.add_argument("--budget-cny", type=float, default=10.0)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--skip-done", action="store_true", help="skip briefs that already have a video in the ledger")
     args = ap.parse_args()
     args.ledger = args.ledger or str(ROOT / "benchmarks" / "results" / f"ledger_{args.label}.jsonl")
     os.chdir(ROOT)
