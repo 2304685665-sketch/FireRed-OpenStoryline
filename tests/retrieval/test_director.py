@@ -1,0 +1,82 @@
+import asyncio
+import json
+import re
+
+from open_storyline.director.catalog import Catalog, Line
+from open_storyline.director.graph import DirectorConfig, direct
+from open_storyline.retrieval.fakes import FakeColourEncoder
+from open_storyline.timeline.plan import EditPlan, validate
+
+LINES = [Line("L0", "clips/rgb.mp4", 0.5, 2.0, "红色电话响了"), Line("L1", "clips/rgb.mp4", 4.0, 5.5, "咸到爆炸")]
+OUTLINE = {"target_s": 6, "order": "chronological", "header": "测试", "beats": [
+    {"id": "b1", "purpose": "hook", "query": "咸到爆炸", "target_s": 2, "punch": "踩雷了", "verdict": None},
+    {"id": "b2", "purpose": "setup", "query": "红色的电话画面", "target_s": 2, "card": "第1顿", "verdict": "black"},
+    {"id": "b3", "purpose": "ending", "query": "白色的走廊", "target_s": 2, "endcard": "评论区见", "verdict": None},
+]}
+
+
+class Msg:
+    def __init__(self, content):
+        self.content = content
+
+
+class FakeLLM:
+    def __init__(self, fn):
+        self.fn, self.calls = fn, []
+
+    async def ainvoke(self, msg):
+        self.calls.append(msg)
+        return Msg(self.fn(msg))
+
+
+def selector(msg):
+    beat = re.search(r'"id": "(b\d)"', msg).group(1)
+    if beat == "b1":
+        return json.dumps({"segment_id": "clips/rgb.mp4#001", "in_s": 3.5, "out_s": 6.0,
+                           "dialogue": [{"line_id": "L1", "text": "咸到爆炸！"}]})
+    if beat == "b2":
+        if "被剪断" in msg:  # repaired after critic feedback
+            return json.dumps({"segment_id": "clips/rgb.mp4#000", "in_s": 0.3, "out_s": 2.5,
+                               "dialogue": [{"line_id": "L0", "text": "红色电话响了"}]})
+        return json.dumps({"segment_id": "clips/rgb.mp4#000", "in_s": 1.0, "out_s": 2.5,
+                           "dialogue": [{"line_id": "L0", "text": "红色电话响了"}]})
+    return json.dumps({"segment_id": "walk/white.mp4#000", "in_s": 0.0, "out_s": 3.0, "dialogue": []})
+
+
+def make(fake_index, **cfg):
+    index, _ = fake_index
+    cat = Catalog(index, LINES, sources=["clips/rgb.mp4", "walk/white.mp4"], encoder=FakeColourEncoder())
+    d, s = FakeLLM(lambda m: json.dumps(OUTLINE, ensure_ascii=False)), FakeLLM(selector)
+    out = asyncio.run(direct("剪一条 6 秒的测试视频", cat, d, s, DirectorConfig(**cfg)))
+    return cat, d, s, out
+
+
+def test_speech_channel_finds_line_only_in_audio(fake_index):
+    index, _ = fake_index
+    cat = Catalog(index, LINES, sources=["clips/rgb.mp4"], encoder=FakeColourEncoder())
+    top = cat.search("咸到爆炸", k=1)[0]
+    assert top["segment_id"] == "clips/rgb.mp4#001" and top["lines"][0]["text"] == "咸到爆炸"
+
+
+def test_critic_repairs_only_the_failing_beat_and_plan_is_valid(fake_index):
+    cat, d, s, out = make(fake_index)
+    assert len(d.calls) == 1
+    assert len(s.calls) == 4  # 3 beats + 1 repair of b2 only
+    assert sum("被剪断" in m for m in s.calls) == 1
+    plan = EditPlan.from_dict(out["plan"])
+    assert [sh.beat for sh in plan.shots] == ["b1", "b2", "b3"]  # hook first, ending last
+    assert abs(plan.duration - 6) <= 6 * 0.15
+    seg_len = {"clips/rgb.mp4": 18.0, "walk/white.mp4": 14.0}
+    assert [i for i in validate(plan, seg_len) if i.level == "error"] == []
+    b2 = plan.shots[1]
+    cap = [o for o in b2.overlays if o.kind == "dialogue"][0]
+    assert b2.in_s <= 0.5 and cap.start >= 0 and cap.end <= b2.duration  # whole line kept
+    assert any(o.kind == "stamp" and o.verdict == "black" for o in b2.overlays)
+    assert out["issues"] == {}
+
+
+def test_without_critic_the_cut_line_ships(fake_index):
+    _, _, s, out = make(fake_index, critic=False)
+    assert len(s.calls) == 3
+    b2 = EditPlan.from_dict(out["plan"]).shots[1]
+    assert b2.in_s == 1.0  # line L0 starts at 0.5: cut off
