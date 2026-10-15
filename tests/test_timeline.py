@@ -44,3 +44,13 @@ def test_ass_events_use_absolute_times_and_music_ducks_under_speech():
     assert "0:00:03.00,0:00:05.00,Stamp" in ass and "Header,,0,0,0,,H" in ass
     expr = music_volume_expr(p)
     assert "between(t,2.000,5.000),0.05" in expr and "between(t,0.000,2.000),0.3" in expr
+
+
+def test_shot_cache_key_ignores_overlays_but_not_range():
+    from open_storyline.timeline.render import shot_key
+
+    p = plan()
+    a = Shot("a.mp4", 0, 2, overlays=[Overlay("punch", "x")])
+    assert shot_key(a, p) == shot_key(Shot("a.mp4", 0, 2), p)
+    assert shot_key(a, p) != shot_key(Shot("a.mp4", 0, 2.5), p)
+    assert shot_key(a, p) != shot_key(Shot("a.mp4", 0, 2, audio=0.5), p)

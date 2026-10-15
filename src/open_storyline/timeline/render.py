@@ -17,6 +17,7 @@ loudness-normalized at the end.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -151,6 +152,11 @@ def render_shot(src: str, shot, plan: EditPlan, out: Path) -> None:
     run(cmd)
 
 
+def shot_key(shot, plan: EditPlan) -> str:
+    raw = json.dumps([shot.source, shot.in_s, shot.out_s, shot.audio, plan.width, plan.height, plan.fps, 1])
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
 def music_volume_expr(plan: EditPlan) -> str:
     parts = []
     for shot, t in zip(plan.shots, plan.starts()):
@@ -179,10 +185,16 @@ def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: s
         if f.suffix.lower() in (".ttf", ".otf", ".ttc") and not (fdir / f.name).exists():
             shutil.copy(f, fdir / f.name)
 
-    parts = []
-    for i, shot in enumerate(plan.shots):
-        p = work / f"shot_{i:03d}.mp4"
-        render_shot(str(media_root / shot.source), shot, plan, p)
+    # Shots are cached by content (source, range, gain, canvas): editing captions, order or
+    # one shot of the plan re-renders only what changed.
+    parts, rendered = [], 0
+    for shot in plan.shots:
+        p = work / f"shot_{shot_key(shot, plan)}.mp4"
+        if not p.exists():
+            tmp = p.with_suffix(".tmp.mp4")
+            render_shot(str(media_root / shot.source), shot, plan, tmp)
+            tmp.rename(p)
+            rendered += 1
         parts.append(p)
     (work / "list.txt").write_text("".join(f"file '{p.resolve()}'\n" for p in parts))
     base = work / "base.mp4"
@@ -217,7 +229,7 @@ def render(plan: EditPlan, media_root: str | Path, fonts_dir: str | Path, out: s
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[v]", "-map", "[a]",
          "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", "-b:a", "192k",
          "-movflags", "+faststart", "-t", f"{total:.3f}", str(out)])
-    return {"out": str(out), "duration": total, "shots": len(plan.shots),
+    return {"out": str(out), "duration": total, "shots": len(plan.shots), "shots_rendered": rendered,
             "warnings": [f"{i.where}: {i.message}" for i in issues if i.level == "warning"]}
 
 
