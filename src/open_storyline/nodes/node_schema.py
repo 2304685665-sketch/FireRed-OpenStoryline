@@ -258,6 +258,10 @@ class GroupClipsInput(BaseModel):
         description="auto: Organize clips in a logical order based on narrative flow of media content and user's sequencing requirements; skip: Skip sorting; default: Use default ordering method"
     )
     user_request: Annotated[str, Field(default="", description="User's requirements for media organization order; if none provided, arrange in a logical narrative sequence following standard conventions.")]
+    order: Literal["narrative", "chronological"] = Field(
+        default="narrative",
+        description="narrative: the model decides the order of groups; chronological: keep the order in which the footage was shot (capture time, then file name, then position in the file). Use chronological for travel vlogs, diaries, or when the user asks for time order (按时间顺序/按拍摄顺序)."
+    )
 
 class GroupClipsOutput(BaseModel):
     groups: List[GroupClips] = Field(default_factory=list, description="List of clips")

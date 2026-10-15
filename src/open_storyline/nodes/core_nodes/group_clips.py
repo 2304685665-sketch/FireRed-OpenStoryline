@@ -6,6 +6,7 @@ from open_storyline.nodes.node_schema import GroupClipsInput
 from src.open_storyline.utils.prompts import get_prompt
 from open_storyline.utils.parse_json import parse_json_dict
 from open_storyline.utils.register import NODE_REGISTRY
+from open_storyline.utils.chronology import clip_time_keys, reorder_chronologically
 
 @NODE_REGISTRY.register()
 class GroupClipsNode(BaseNode):
@@ -15,8 +16,8 @@ class GroupClipsNode(BaseNode):
         description="Group clips based on their descriptions according to user requirements. Depends on the filter_clips tool output",
         node_id="group_clips",
         node_kind="group_clips",
-        require_prior_kind=['filter_clips'],
-        default_require_prior_kind=['filter_clips'],
+        require_prior_kind=['filter_clips', 'load_media', 'split_shots'],
+        default_require_prior_kind=['filter_clips', 'load_media', 'split_shots'],
         next_available_node=['generate_script', 'generate_script_pro'],
     )
     input_schema = GroupClipsInput
@@ -27,11 +28,14 @@ class GroupClipsNode(BaseNode):
         inputs: Dict[str, Any],
     ) -> Any:
         result = _make_single_group_fallback(inputs["filter_clips"].get("selected", []))
-        return {
-            "groups": result,
-        }
+        return _apply_order({"groups": result}, inputs, node_state)
 
     async def process(self, node_state: NodeState, inputs: Dict[str, Any], **params) -> Any:
+        if inputs.get("order") == "chronological":
+            inputs = {**inputs, "user_request": (inputs.get("user_request") or "") + _CHRONO_HINT.get(node_state.lang, _CHRONO_HINT["en"])}
+        return _apply_order(await self._group(node_state, inputs), inputs, node_state)
+
+    async def _group(self, node_state: NodeState, inputs: Dict[str, Any]) -> Any:
         clip_captions = inputs["filter_clips"].get("clip_captions")
         selected_clips = inputs["filter_clips"].get("selected")
         user_request = inputs["user_request"]
@@ -183,6 +187,23 @@ def _normalize_groups_from_llm(
         g["group_id"] = f"group_{i:04d}"
 
     return normalized_groups
+
+
+_CHRONO_HINT = {
+    "zh": "\n（顺序将按拍摄时间自动排列：请只把时间上相邻、内容连贯的镜头分在同一组。）",
+    "en": "\n(Order will follow capture time automatically: only group clips that are adjacent in time and content.)",
+}
+
+
+def _apply_order(result: Dict[str, Any], inputs: Dict[str, Any], node_state: NodeState) -> Dict[str, Any]:
+    if inputs.get("order") != "chronological" or not result.get("groups"):
+        return result
+    media = (inputs.get("load_media") or {}).get("media", [])
+    clips = (inputs.get("split_shots") or {}).get("clips", [])
+    keys = clip_time_keys(media, clips)
+    result["groups"] = reorder_chronologically(result["groups"], keys)
+    node_state.node_summary.info_for_user("Groups ordered by capture time")
+    return result
 
 
 def _build_clip_lookup(clip_captions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
